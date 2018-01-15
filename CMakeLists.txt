@@ -204,6 +204,12 @@ add_subdirectory(examples)
 # Build unit tests
 add_subdirectory(test)
 
+# Build the ingestors if "ingestors" subdirectory is present.
+if(EXISTS "${CMAKE_SOURCE_DIR}/ingestors")
+  message(STATUS "The TileDB ingestors are built.")
+  add_subdirectory(ingestors)
+endif()
+
 ############################################################
 # "make format" and "make check-format" targets
 ############################################################
