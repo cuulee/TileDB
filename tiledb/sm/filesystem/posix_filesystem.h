@@ -204,6 +204,24 @@ Status sync(const std::string& path);
  */
 Status write(const std::string& path, const void* buffer, uint64_t buffer_size);
 
+/**
+ * Writes the input buffer to a file starting at the given byte offset.
+ *
+ * If the file exists than it is created.
+ * If the file does not exist than it is appended to.
+ *
+ * @param path The name of the file.
+ * @param offset The offset in the file at which the write will start.
+ * @param buffer The input buffer.
+ * @param buffer_size The size of the input buffer.
+ * @return Status
+ */
+Status write(
+    const std::string& path,
+    uint64_t offset,
+    const void* buffer,
+    uint64_t buffer_size);
+
 }  // namespace posix
 
 }  // namespace sm

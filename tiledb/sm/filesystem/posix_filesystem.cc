@@ -381,12 +381,32 @@ Status sync(const std::string& path) {
 
 Status write(
     const std::string& path, const void* buffer, uint64_t buffer_size) {
+  uint64_t size = 0;
+  if (is_file(path) && !file_size(path, &size).ok()) {
+    return LOG_STATUS(Status::IOError(
+        std::string("Cannot write to file '") + path + "'; File stat error"));
+  }
+  return write(path, size, buffer, buffer_size);
+}
+
+Status write(
+    const std::string& path,
+    uint64_t offset,
+    const void* buffer,
+    uint64_t buffer_size) {
   // Open file
-  int fd = open(path.c_str(), O_WRONLY | O_APPEND | O_CREAT, S_IRWXU);
+  int fd = open(path.c_str(), O_WRONLY | O_CREAT, S_IRWXU);
   if (fd == -1) {
     return LOG_STATUS(Status::IOError(
         std::string("Cannot write to file '") + path +
         "'; File opening error"));
+  }
+
+  // Seek to the proper offset (may be beyond the end of the current file).
+  auto off = lseek(fd, offset, SEEK_SET);
+  if (off == -1) {
+    return LOG_STATUS(Status::IOError(
+        std::string("Cannot write to file '") + path + "'; File seek error"));
   }
 
   // Append data to the file in batches of constants::max_write_bytes
