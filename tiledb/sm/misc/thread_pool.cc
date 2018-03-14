@@ -56,6 +56,10 @@ ThreadPool::~ThreadPool() {
   }
 }
 
+uint64_t ThreadPool::num_threads() const {
+  return threads_.size();
+}
+
 void ThreadPool::wait_all() {
   {
     std::unique_lock<std::mutex> lck(queue_mutex_);

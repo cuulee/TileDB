@@ -56,6 +56,8 @@ class ThreadPool {
     }
   }
 
+  uint64_t num_threads() const;
+
   void wait_all();
 
  private:
