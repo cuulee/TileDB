@@ -40,6 +40,7 @@
 #include "tiledb/sm/misc/status.h"
 #include "tiledb/sm/misc/uri.h"
 #include "tiledb/sm/storage_manager/config.h"
+#include "tiledb/sm/misc/thread_pool.h"
 
 #ifdef HAVE_HDFS
 #include "hdfs.h"
@@ -302,6 +303,9 @@ class VFS {
 
   /** The set with the supported filesystems. */
   std::set<Filesystem> supported_fs_;
+
+  /** Thread pool for parallel I/O operations. */
+  std::unique_ptr<ThreadPool> thread_pool_;
 };
 
 }  // namespace sm

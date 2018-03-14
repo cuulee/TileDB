@@ -35,9 +35,9 @@
 namespace tiledb {
 namespace sm {
 
-ThreadPool::ThreadPool(unsigned num_threads) {
+ThreadPool::ThreadPool(uint64_t num_threads) {
   should_terminate_ = false;
-  for (unsigned i = 0; i < num_threads; i++) {
+  for (uint64_t i = 0; i < num_threads; i++) {
     threads_.emplace_back([this]() { worker(*this); });
   }
 }

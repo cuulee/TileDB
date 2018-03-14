@@ -491,7 +491,11 @@ Status VFS::init(const Config::VFSParams& vfs_params) {
   RETURN_NOT_OK(s3_.connect(s3_config));
 #endif
 
-  (void)vfs_params;
+  thread_pool_ = std::unique_ptr<ThreadPool>(
+      new (std::nothrow) ThreadPool(vfs_params.num_parallel_operations_));
+  if (thread_pool_.get() == nullptr) {
+    return LOG_STATUS(Status::VFSError("Could not create VFS thread pool"));
+  }
 
   return Status::Ok();
 

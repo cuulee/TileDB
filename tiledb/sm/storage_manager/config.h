@@ -96,8 +96,10 @@ class Config {
   struct VFSParams {
     S3Params s3_params_;
     HDFSParams hdfs_params_;
+    uint64_t num_parallel_operations_;
 
     VFSParams() {
+      num_parallel_operations_ = 1;
     }
   };
 
@@ -234,6 +236,9 @@ class Config {
 
   /** Sets the tile cache size, properly parsing the input value. */
   Status set_sm_tile_cache_size(const std::string& value);
+
+  /** Sets the number of allowed VFS parallel operations. */
+  Status set_vfs_num_parallel_operations(const std::string& value);
 
   /** Sets the S3 region. */
   Status set_vfs_s3_region(const std::string& value);

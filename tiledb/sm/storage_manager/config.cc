@@ -153,6 +153,8 @@ Status Config::set(const std::string& param, const std::string& value) {
     RETURN_NOT_OK(set_sm_array_schema_cache_size(value));
   } else if (param == "sm.fragment_metadata_cache_size") {
     RETURN_NOT_OK(set_sm_fragment_metadata_cache_size(value));
+  } else if (param == "vfs.num_parallel_operations") {
+    RETURN_NOT_OK(set_vfs_num_parallel_operations(value));
   } else if (param == "vfs.s3.region") {
     RETURN_NOT_OK(set_vfs_s3_region(value));
   } else if (param == "vfs.s3.scheme") {
@@ -362,6 +364,14 @@ Status Config::set_sm_tile_cache_size(const std::string& value) {
   uint64_t v;
   RETURN_NOT_OK(utils::parse::convert(value, &v));
   sm_params_.tile_cache_size_ = v;
+
+  return Status::Ok();
+}
+
+Status Config::set_vfs_num_parallel_operations(const std::string& value) {
+  uint64_t v;
+  RETURN_NOT_OK(utils::parse::convert(value, &v));
+  vfs_params_.num_parallel_operations_ = v;
 
   return Status::Ok();
 }

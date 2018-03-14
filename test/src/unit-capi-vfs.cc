@@ -74,36 +74,18 @@ struct VFSFx {
   void check_append(const std::string& path);
   static std::string random_bucket_name(const std::string& prefix);
   void set_supported_fs();
+  void set_num_vfs_threads(unsigned num_threads);
 };
 
 VFSFx::VFSFx() {
+  ctx_ = nullptr;
+  vfs_ = nullptr;
+
   // Supported filesystems
   set_supported_fs();
 
-  // Create TileDB context
-  tiledb_config_t* config = nullptr;
-  tiledb_error_t* error = nullptr;
-  REQUIRE(tiledb_config_create(&config, &error) == TILEDB_OK);
-  REQUIRE(error == nullptr);
-  if (supports_s3_) {
-    REQUIRE(
-        tiledb_config_set(
-            config, "vfs.s3.endpoint_override", "localhost:9999", &error) ==
-        TILEDB_OK);
-    REQUIRE(
-        tiledb_config_set(config, "vfs.s3.scheme", "http", &error) ==
-        TILEDB_OK);
-    REQUIRE(
-        tiledb_config_set(
-            config, "vfs.s3.use_virtual_addressing", "false", &error) ==
-        TILEDB_OK);
-    REQUIRE(error == nullptr);
-  }
-  REQUIRE(tiledb_ctx_create(&ctx_, config) == TILEDB_OK);
-  REQUIRE(error == nullptr);
-  int rc = tiledb_vfs_create(ctx_, &vfs_, config);
-  REQUIRE(rc == TILEDB_OK);
-  REQUIRE(tiledb_config_free(&config) == TILEDB_OK);
+  // Create context and VFS with 1 thread
+  set_num_vfs_threads(1);
 }
 
 VFSFx::~VFSFx() {
@@ -124,6 +106,50 @@ void VFSFx::set_supported_fs() {
   supports_hdfs_ = (bool)is_supported;
 
   REQUIRE(tiledb_ctx_free(&ctx) == TILEDB_OK);
+}
+
+void VFSFx::set_num_vfs_threads(unsigned num_threads) {
+  if (vfs_ != nullptr) {
+    CHECK(tiledb_vfs_free(ctx_, &vfs_) == TILEDB_OK);
+  }
+  if (ctx_ != nullptr) {
+    CHECK(tiledb_ctx_free(&ctx_) == TILEDB_OK);
+  }
+
+  // Create TileDB context
+  tiledb_config_t* config = nullptr;
+  tiledb_error_t* error = nullptr;
+  REQUIRE(tiledb_config_create(&config, &error) == TILEDB_OK);
+  REQUIRE(error == nullptr);
+  if (supports_s3_) {
+    REQUIRE(
+        tiledb_config_set(
+            config, "vfs.s3.endpoint_override", "localhost:9999", &error) ==
+        TILEDB_OK);
+    REQUIRE(
+        tiledb_config_set(config, "vfs.s3.scheme", "http", &error) ==
+        TILEDB_OK);
+    REQUIRE(
+        tiledb_config_set(
+            config, "vfs.s3.use_virtual_addressing", "false", &error) ==
+        TILEDB_OK);
+    REQUIRE(error == nullptr);
+  }
+
+  // Set number of threads
+  REQUIRE(
+      tiledb_config_set(
+          config,
+          "vfs.num_parallel_operations",
+          std::to_string(num_threads).c_str(),
+          &error) == TILEDB_OK);
+  REQUIRE(error == nullptr);
+
+  REQUIRE(tiledb_ctx_create(&ctx_, config) == TILEDB_OK);
+  REQUIRE(error == nullptr);
+  int rc = tiledb_vfs_create(ctx_, &vfs_, config);
+  REQUIRE(rc == TILEDB_OK);
+  REQUIRE(tiledb_config_free(&config) == TILEDB_OK);
 }
 
 void VFSFx::check_vfs(const std::string& path) {
@@ -584,4 +610,16 @@ TEST_CASE_METHOD(
     rc = tiledb_vfs_free(ctx_, &vfs);
     CHECK(rc == TILEDB_OK);
   }
+}
+
+TEST_CASE_METHOD(VFSFx, "C API: Test VFS parallel I/O", "[capi], [vfs]") {
+  set_num_vfs_threads(4);
+
+  check_vfs(FILE_TEMP_DIR);
+
+  if (supports_s3_)
+    check_vfs(S3_TEMP_DIR);
+
+  if (supports_hdfs_)
+    check_vfs(HDFS_TEMP_DIR);
 }

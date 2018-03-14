@@ -44,11 +44,11 @@ namespace sm {
 
 class ThreadPool {
  public:
-  explicit ThreadPool(unsigned num_threads = 1);
+  explicit ThreadPool(uint64_t num_threads = 1);
 
   ~ThreadPool();
 
-  void enqueue(std::function<void()> function) {
+  void enqueue(const std::function<void()> &function) {
     {
       std::unique_lock<std::mutex> lck(queue_mutex_);
       task_queue_.push(function);
