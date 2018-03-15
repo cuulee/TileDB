@@ -143,6 +143,14 @@ void VFSFx::set_num_vfs_threads(unsigned num_threads) {
           "vfs.num_parallel_operations",
           std::to_string(num_threads).c_str(),
           &error) == TILEDB_OK);
+  // Set very small parallelization threshold (ignored when there is only 1
+  // thread).
+  REQUIRE(
+      tiledb_config_set(
+          config,
+          "vfs.parallel_read_threshold",
+          std::to_string(1).c_str(),
+          &error) == TILEDB_OK);
   REQUIRE(error == nullptr);
 
   REQUIRE(tiledb_ctx_create(&ctx_, config) == TILEDB_OK);
