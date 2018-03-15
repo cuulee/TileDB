@@ -608,6 +608,10 @@ Status VFS::read(
       nbytes >= parallel_read_threshold_ ? thread_pool_->num_threads() : 1;
   uint64_t thread_read_nbytes = utils::ceil(nbytes, num_threads);
 
+#ifdef HAVE_S3
+  const S3& s3 = s3_;
+#endif
+
   std::vector<std::future<Status>> results;
   for (uint64_t i = 0; i < num_threads; i++) {
     uint64_t begin = i * thread_read_nbytes,
@@ -615,37 +619,42 @@ Status VFS::read(
     uint64_t thread_nbytes = end - begin + 1;
     auto thread_buffer = reinterpret_cast<char*>(buffer) + begin;
     uint64_t thread_offset = offset + begin;
-    results.push_back(thread_pool_->enqueue(
-        [&uri, thread_offset, thread_buffer, thread_nbytes]() {
-          if (uri.is_file()) {
-#ifdef _WIN32
-            return win::read(
-                uri.to_path(), thread_offset, thread_buffer, thread_nbytes);
-#else
-            return posix::read(
-                uri.to_path(), thread_offset, thread_buffer, thread_nbytes);
-#endif
-          }
-          if (uri.is_hdfs()) {
-#ifdef HAVE_HDFS
-            return hdfs::read(
-                hdfs_, uri, thread_offset, thread_buffer, thread_nbytes);
-#else
-            return LOG_STATUS(
-                Status::VFSError("TileDB was built without HDFS support"));
-#endif
-          }
-          if (uri.is_s3()) {
+    results.push_back(thread_pool_->enqueue([&uri,
 #ifdef HAVE_S3
-            return s3_.read(uri, thread_offset, thread_buffer, thread_nbytes);
-#else
-            return LOG_STATUS(
-                Status::VFSError("TileDB was built without S3 support"));
+                                             &s3,
 #endif
-          }
-          return LOG_STATUS(
-              Status::VFSError("Unsupported URI schemes: " + uri.to_string()));
-        }));
+                                             thread_offset,
+                                             thread_buffer,
+                                             thread_nbytes]() {
+      if (uri.is_file()) {
+#ifdef _WIN32
+        return win::read(
+            uri.to_path(), thread_offset, thread_buffer, thread_nbytes);
+#else
+        return posix::read(
+            uri.to_path(), thread_offset, thread_buffer, thread_nbytes);
+#endif
+      }
+      if (uri.is_hdfs()) {
+#ifdef HAVE_HDFS
+        return hdfs::read(
+            hdfs_, uri, thread_offset, thread_buffer, thread_nbytes);
+#else
+        return LOG_STATUS(
+            Status::VFSError("TileDB was built without HDFS support"));
+#endif
+      }
+      if (uri.is_s3()) {
+#ifdef HAVE_S3
+        return s3.read(uri, thread_offset, thread_buffer, thread_nbytes);
+#else
+        return LOG_STATUS(
+            Status::VFSError("TileDB was built without S3 support"));
+#endif
+      }
+      return LOG_STATUS(
+          Status::VFSError("Unsupported URI schemes: " + uri.to_string()));
+    }));
   }
 
   bool all_ok = thread_pool_->wait_all(results);
