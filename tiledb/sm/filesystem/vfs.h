@@ -306,6 +306,9 @@ class VFS {
 
   /** Thread pool for parallel I/O operations. */
   std::unique_ptr<ThreadPool> thread_pool_;
+
+  /** Threshold (in bytes) for read operations to be parallelized. */
+  uint64_t parallel_read_threshold_;
 };
 
 }  // namespace sm

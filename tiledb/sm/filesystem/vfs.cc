@@ -497,6 +497,8 @@ Status VFS::init(const Config::VFSParams& vfs_params) {
     return LOG_STATUS(Status::VFSError("Could not create VFS thread pool"));
   }
 
+  parallel_read_threshold_ = vfs_params.parallel_read_threshold_;
+
   return Status::Ok();
 
   STATS_FUNC_OUT(vfs_init);

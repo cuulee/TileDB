@@ -97,9 +97,11 @@ class Config {
     S3Params s3_params_;
     HDFSParams hdfs_params_;
     uint64_t num_parallel_operations_;
+    uint64_t parallel_read_threshold_;
 
     VFSParams() {
       num_parallel_operations_ = 1;
+      parallel_read_threshold_ = 10 * 1024 * 1024;
     }
   };
 
@@ -239,6 +241,9 @@ class Config {
 
   /** Sets the number of allowed VFS parallel operations. */
   Status set_vfs_num_parallel_operations(const std::string& value);
+
+  /** Sets the VFS parallel read threshold. */
+  Status set_vfs_parallel_read_threshold(const std::string& value);
 
   /** Sets the S3 region. */
   Status set_vfs_s3_region(const std::string& value);
