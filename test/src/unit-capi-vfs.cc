@@ -32,6 +32,7 @@
 
 #include "catch.hpp"
 #include "tiledb/sm/c_api/tiledb.h"
+#include "tiledb/sm/misc/stats.h"
 #include "tiledb/sm/misc/utils.h"
 #ifdef _WIN32
 #include "tiledb/sm/filesystem/win_filesystem.h"
@@ -596,6 +597,9 @@ std::string VFSFx::random_bucket_name(const std::string& prefix) {
 }
 
 TEST_CASE_METHOD(VFSFx, "C API: Test virtual filesystem", "[capi], [vfs]") {
+  tiledb_stats_enable();
+  tiledb_stats_reset();
+
   check_vfs(FILE_TEMP_DIR);
 
   if (supports_s3_)
@@ -603,6 +607,8 @@ TEST_CASE_METHOD(VFSFx, "C API: Test virtual filesystem", "[capi], [vfs]") {
 
   if (supports_hdfs_)
     check_vfs(HDFS_TEMP_DIR);
+
+  CHECK(tiledb::sm::stats::all_stats.counter_vfs_read_num_parallelized == 0);
 }
 
 TEST_CASE_METHOD(
@@ -621,6 +627,8 @@ TEST_CASE_METHOD(
 }
 
 TEST_CASE_METHOD(VFSFx, "C API: Test VFS parallel I/O", "[capi], [vfs]") {
+  tiledb_stats_enable();
+  tiledb_stats_reset();
   set_num_vfs_threads(4);
 
   check_vfs(FILE_TEMP_DIR);
@@ -630,4 +638,6 @@ TEST_CASE_METHOD(VFSFx, "C API: Test VFS parallel I/O", "[capi], [vfs]") {
 
   if (supports_hdfs_)
     check_vfs(HDFS_TEMP_DIR);
+
+  CHECK(tiledb::sm::stats::all_stats.counter_vfs_read_num_parallelized > 0);
 }
