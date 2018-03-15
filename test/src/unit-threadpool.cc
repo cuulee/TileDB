@@ -36,35 +36,66 @@
 
 using namespace tiledb::sm;
 
-TEST_CASE("ThreadPool: Test empty wait", "[threadpool]") {
-  ThreadPool pool;
-  pool.wait_all();
+TEST_CASE("ThreadPool: Test empty", "[threadpool]") {
+  for (int i = 0; i < 10; i++) {
+    ThreadPool pool(4);
+  }
 }
 
-TEST_CASE("ThreadPool: Test single", "[threadpool]") {
-  ThreadPool pool;
+TEST_CASE("ThreadPool: Test single thread", "[threadpool]") {
   int result = 0;
-  for (int i = 0; i < 100; i ++) {
-    pool.enqueue([&result]() { result++; });
+  std::vector<std::future<Status>> results;
+  ThreadPool pool;
+  for (int i = 0; i < 100; i++) {
+    results.push_back(pool.enqueue([&result]() {
+      result++;
+      return Status::Ok();
+    }));
   }
-  pool.wait_all();
+  CHECK(pool.wait_all(results));
   CHECK(result == 100);
 }
 
-TEST_CASE("ThreadPool: Test multiple", "[threadpool]") {
-  ThreadPool pool(4);
+TEST_CASE("ThreadPool: Test multiple threads", "[threadpool]") {
   std::atomic<int> result(0);
-  for (int i = 0; i < 100; i ++) {
-    pool.enqueue([&result]() { result++; });
+  std::vector<std::future<Status>> results;
+  ThreadPool pool(4);
+  for (int i = 0; i < 100; i++) {
+    results.push_back(pool.enqueue([&result]() {
+      result++;
+      return Status::Ok();
+    }));
   }
-  pool.wait_all();
+  CHECK(pool.wait_all(results));
+  CHECK(result == 100);
+}
+
+TEST_CASE("ThreadPool: Test wait status", "[threadpool]") {
+  std::atomic<int> result(0);
+  std::vector<std::future<Status>> results;
+  ThreadPool pool(4);
+  for (int i = 0; i < 100; i++) {
+    results.push_back(pool.enqueue([&result, i]() {
+      result++;
+      return i == 50 ? Status::Error("Generic error") : Status::Ok();
+    }));
+  }
+  CHECK(!pool.wait_all(results));
   CHECK(result == 100);
 }
 
 TEST_CASE("ThreadPool: Test no wait", "[threadpool]") {
-  ThreadPool pool(4);
-  std::atomic<int> result(0);
-  for (int i = 0; i < 100; i ++) {
-    pool.enqueue([&result]() { result++; });
+  {
+    ThreadPool pool(4);
+    std::atomic<int> result(0);
+    for (int i = 0; i < 5; i++) {
+      pool.enqueue([&result]() {
+        result++;
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        return Status::Ok();
+      });
+    }
+    // There may be an error logged when the pool is destroyed if there are
+    // outstanding tasks, but everything should still complete.
   }
 }

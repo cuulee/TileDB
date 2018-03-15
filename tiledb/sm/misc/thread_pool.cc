@@ -31,6 +31,7 @@
  */
 
 #include "tiledb/sm/misc/thread_pool.h"
+#include "tiledb/sm/misc/logger.h"
 
 namespace tiledb {
 namespace sm {
@@ -43,10 +44,11 @@ ThreadPool::ThreadPool(uint64_t num_threads) {
 }
 
 ThreadPool::~ThreadPool() {
-  wait_all();
-
   {
     std::unique_lock<std::mutex> lck(queue_mutex_);
+    if (!task_queue_.empty()) {
+      LOG_ERROR("Destroying ThreadPool with outstanding tasks.");
+    }
     should_terminate_ = true;
     queue_cv_.notify_all();
   }
@@ -56,20 +58,42 @@ ThreadPool::~ThreadPool() {
   }
 }
 
+std::future<Status> ThreadPool::enqueue(
+    const std::function<Status()>& function) {
+  std::packaged_task<Status()> task(function);
+  auto future = task.get_future();
+
+  {
+    std::unique_lock<std::mutex> lck(queue_mutex_);
+    task_queue_.push(std::move(task));
+    queue_cv_.notify_one();
+  }
+
+  return future;
+}
+
 uint64_t ThreadPool::num_threads() const {
   return threads_.size();
 }
 
-void ThreadPool::wait_all() {
-  {
-    std::unique_lock<std::mutex> lck(queue_mutex_);
-    queue_cv_.wait(lck, [this]() { return this->task_queue_.empty(); });
+
+bool ThreadPool::wait_all(std::vector<std::future<Status>> &tasks) {
+  bool all_ok = true;
+  for (auto &future : tasks) {
+    if (!future.valid()) {
+      LOG_ERROR("Waiting on invalid future.");
+      all_ok = false;
+    } else {
+      Status status = future.get();
+      all_ok &= status.ok();
+    }
   }
+  return all_ok;
 }
 
 void ThreadPool::worker(ThreadPool& pool) {
   while (true) {
-    std::function<void()> task;
+    std::packaged_task<Status()> task;
     {
       std::unique_lock<std::mutex> lck(pool.queue_mutex_);
       pool.queue_cv_.wait(lck, [&pool]() {
@@ -79,11 +103,9 @@ void ThreadPool::worker(ThreadPool& pool) {
       if (pool.should_terminate_) {
         break;
       } else {
-        task = pool.task_queue_.front();
+        task = std::move(pool.task_queue_.front());
         pool.task_queue_.pop();
       }
-
-      pool.queue_cv_.notify_all();
     }
 
     task();

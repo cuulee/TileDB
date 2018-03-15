@@ -34,31 +34,51 @@
 #define TILEDB_THREAD_POOL_H
 
 #include <condition_variable>
+#include <future>
 #include <mutex>
 #include <queue>
 #include <thread>
 #include <vector>
 
+#include "tiledb/sm/misc/status.h"
+
 namespace tiledb {
 namespace sm {
 
+/**
+ * Thread pool class.
+ */
 class ThreadPool {
  public:
+
+  /**
+   * Constructor.
+   *
+   * @param num_threads Number of threads to create (default 1).
+   */
   explicit ThreadPool(uint64_t num_threads = 1);
 
+  /** Destructor. */
   ~ThreadPool();
 
-  void enqueue(const std::function<void()> &function) {
-    {
-      std::unique_lock<std::mutex> lck(queue_mutex_);
-      task_queue_.push(function);
-      queue_cv_.notify_one();
-    }
-  }
+  /**
+   * Enqueue a new task to be executed by a thread.
+   *
+   * @param function Task function to execute.
+   * @return Future for the return value of the task.
+   */
+  std::future<Status> enqueue(const std::function<Status()>& function);
 
+  /** Return the number of threads in this pool. */
   uint64_t num_threads() const;
 
-  void wait_all();
+  /**
+   * Wait on all the given tasks to complete.
+   *
+   * @param tasks Task list to wait on.
+   * @return True if all tasks returned Status::Ok, false otherwise.
+   */
+  bool wait_all(std::vector<std::future<Status>> &tasks);
 
  private:
   std::mutex queue_mutex_;
@@ -67,7 +87,7 @@ class ThreadPool {
 
   bool should_terminate_;
 
-  std::queue<std::function<void()>> task_queue_;
+  std::queue<std::packaged_task<Status()>> task_queue_;
 
   std::vector<std::thread> threads_;
 
