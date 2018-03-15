@@ -610,6 +610,7 @@ Status VFS::read(
   if (num_threads == 1) {
     return read_impl(uri, offset, buffer, nbytes);
   } else {
+    STATS_COUNTER_ADD(vfs_read_num_parallelized, 1);
     std::vector<std::future<Status>> results;
     uint64_t thread_read_nbytes = utils::ceil(nbytes, num_threads);
 
