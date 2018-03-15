@@ -606,61 +606,59 @@ Status VFS::read(
 
   uint64_t num_threads =
       nbytes >= parallel_read_threshold_ ? thread_pool_->num_threads() : 1;
-  uint64_t thread_read_nbytes = utils::ceil(nbytes, num_threads);
 
-#ifdef HAVE_S3
-  const S3& s3 = s3_;
-#endif
+  if (num_threads == 1) {
+    return read_impl(uri, offset, buffer, nbytes);
+  } else {
+    std::vector<std::future<Status>> results;
+    uint64_t thread_read_nbytes = utils::ceil(nbytes, num_threads);
 
-  std::vector<std::future<Status>> results;
-  for (uint64_t i = 0; i < num_threads; i++) {
-    uint64_t begin = i * thread_read_nbytes,
-             end = std::min((i + 1) * thread_read_nbytes - 1, nbytes - 1);
-    uint64_t thread_nbytes = end - begin + 1;
-    auto thread_buffer = reinterpret_cast<char*>(buffer) + begin;
-    uint64_t thread_offset = offset + begin;
-    results.push_back(thread_pool_->enqueue([&uri,
-#ifdef HAVE_S3
-                                             &s3,
-#endif
-                                             thread_offset,
-                                             thread_buffer,
-                                             thread_nbytes]() {
-      if (uri.is_file()) {
-#ifdef _WIN32
-        return win::read(
-            uri.to_path(), thread_offset, thread_buffer, thread_nbytes);
-#else
-        return posix::read(
-            uri.to_path(), thread_offset, thread_buffer, thread_nbytes);
-#endif
-      }
-      if (uri.is_hdfs()) {
-#ifdef HAVE_HDFS
-        return hdfs::read(
-            hdfs_, uri, thread_offset, thread_buffer, thread_nbytes);
-#else
-        return LOG_STATUS(
-            Status::VFSError("TileDB was built without HDFS support"));
-#endif
-      }
-      if (uri.is_s3()) {
-#ifdef HAVE_S3
-        return s3.read(uri, thread_offset, thread_buffer, thread_nbytes);
-#else
-        return LOG_STATUS(
-            Status::VFSError("TileDB was built without S3 support"));
-#endif
-      }
-      return LOG_STATUS(
-          Status::VFSError("Unsupported URI schemes: " + uri.to_string()));
-    }));
+    for (uint64_t i = 0; i < num_threads; i++) {
+      uint64_t begin = i * thread_read_nbytes,
+               end = std::min((i + 1) * thread_read_nbytes - 1, nbytes - 1);
+      uint64_t thread_nbytes = end - begin + 1;
+      uint64_t thread_offset = offset + begin;
+      auto thread_buffer = reinterpret_cast<char*>(buffer) + begin;
+      results.push_back(thread_pool_->enqueue(
+          [this, &uri, thread_offset, thread_buffer, thread_nbytes]() {
+            return read_impl(uri, thread_offset, thread_buffer, thread_nbytes);
+          }));
+    }
+
+    bool all_ok = thread_pool_->wait_all(results);
+    return all_ok ? Status::Ok() :
+                    LOG_STATUS(Status::VFSError("VFS parallel read error"));
   }
 
-  bool all_ok = thread_pool_->wait_all(results);
-  return all_ok ? Status::Ok() : LOG_STATUS(Status::VFSError("VFS read error"));
-
   STATS_FUNC_OUT(vfs_read);
+}
+
+Status VFS::read_impl(
+    const URI& uri, uint64_t offset, void* buffer, uint64_t nbytes) const {
+  if (uri.is_file()) {
+#ifdef _WIN32
+    return win::read(uri.to_path(), offset, buffer, nbytes);
+#else
+    return posix::read(uri.to_path(), offset, buffer, nbytes);
+#endif
+  }
+  if (uri.is_hdfs()) {
+#ifdef HAVE_HDFS
+    return hdfs::read(hdfs_, uri, offset, buffer, nbytes);
+#else
+    return LOG_STATUS(
+        Status::VFSError("TileDB was built without HDFS support"));
+#endif
+  }
+  if (uri.is_s3()) {
+#ifdef HAVE_S3
+    return s3_.read(uri, offset, buffer, nbytes);
+#else
+    return LOG_STATUS(Status::VFSError("TileDB was built without S3 support"));
+#endif
+  }
+  return LOG_STATUS(
+      Status::VFSError("Unsupported URI schemes: " + uri.to_string()));
 }
 
 bool VFS::supports_fs(Filesystem fs) const {

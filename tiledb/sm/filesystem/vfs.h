@@ -309,6 +309,18 @@ class VFS {
 
   /** Threshold (in bytes) for read operations to be parallelized. */
   uint64_t parallel_read_threshold_;
+
+  /**
+   * Reads from a file by calling the specific backend read function.
+   *
+   * @param uri The URI of the file.
+   * @param offset The offset where the read begins.
+   * @param buffer The buffer to read into.
+   * @param nbytes Number of bytes to read.
+   * @return Status
+   */
+  Status read_impl(
+      const URI& uri, uint64_t offset, void* buffer, uint64_t nbytes) const;
 };
 
 }  // namespace sm
