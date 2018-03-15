@@ -86,6 +86,9 @@ bool ThreadPool::wait_all(std::vector<std::future<Status>> &tasks) {
     } else {
       Status status = future.get();
       all_ok &= status.ok();
+      if (!status.ok()) {
+        LOG_STATUS(status);
+      }
     }
   }
   return all_ok;
