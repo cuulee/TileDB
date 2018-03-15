@@ -175,6 +175,12 @@ const uint64_t consolidation_buffer_size = 10000000;
 /** The maximum number of bytes written in a single I/O. */
 const uint64_t max_write_bytes = std::numeric_limits<int>::max();
 
+/** The default number of parallel VFS operations allowed. */
+const uint64_t vfs_num_parallel_operations = 1;
+
+/** The default number of bytes before a VFS operation is paralleized. */
+const uint64_t vfs_parallel_read_threshold = 10 * 1024 * 1024;
+
 /** The maximum name length. */
 const unsigned uri_max_len = 256;
 

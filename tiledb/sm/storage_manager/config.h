@@ -100,8 +100,8 @@ class Config {
     uint64_t parallel_read_threshold_;
 
     VFSParams() {
-      num_parallel_operations_ = 1;
-      parallel_read_threshold_ = 10 * 1024 * 1024;
+      num_parallel_operations_ = constants::vfs_num_parallel_operations;
+      parallel_read_threshold_ = constants::vfs_parallel_read_threshold;
     }
   };
 
@@ -149,6 +149,12 @@ class Config {
    *    The fragment metadata cache size in bytes. Any `uint64_t` value is
    *    acceptable. <br>
    *    **Default**: 10,000,000
+   * - `vfs.num_parallel_operations` <br>
+   *    The maximum number of VFS parallel operations.<br>
+   *    **Default**: 1
+   * - `vfs.parallel_read_threshold` <br>
+   *    The number of bytes before a VFS operation is made parallel.<br>
+   *    **Default**: 10MB
    * - `vfs.s3.region` <br>
    *    The S3 region, if S3 is enabled. <br>
    *    **Default**: us-east-1

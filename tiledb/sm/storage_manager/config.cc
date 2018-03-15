@@ -224,6 +224,18 @@ Status Config::unset(const std::string& param) {
     value << sm_params_.fragment_metadata_cache_size_;
     param_values_["sm.fragment_metadata_cache_size"] = value.str();
     value.str(std::string());
+  } else if (param == "vfs.num_parallel_operations") {
+    vfs_params_.num_parallel_operations_ =
+        constants::vfs_num_parallel_operations;
+    value << vfs_params_.num_parallel_operations_;
+    param_values_["vfs.num_parallel_operations"] = value.str();
+    value.str(std::string());
+  } else if (param == "vfs.parallel_read_threshold") {
+    vfs_params_.parallel_read_threshold_ =
+        constants::vfs_parallel_read_threshold;
+    value << vfs_params_.parallel_read_threshold_;
+    param_values_["vfs.parallel_read_threshold"] = value.str();
+    value.str(std::string());
   } else if (param == "vfs.s3.region") {
     vfs_params_.s3_params_.region_ = constants::s3_region;
     value << vfs_params_.s3_params_.region_;
