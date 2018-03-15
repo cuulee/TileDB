@@ -386,7 +386,7 @@ Status Config::set_vfs_num_parallel_operations(const std::string& value) {
   return Status::Ok();
 }
 
-Status Config::set_vfs_parallel_read_threshold(const std::string &value) {
+Status Config::set_vfs_parallel_read_threshold(const std::string& value) {
   uint64_t v;
   RETURN_NOT_OK(utils::parse::convert(value, &v));
   vfs_params_.parallel_read_threshold_ = v;

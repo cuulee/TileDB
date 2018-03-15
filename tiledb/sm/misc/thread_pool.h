@@ -50,7 +50,6 @@ namespace sm {
  */
 class ThreadPool {
  public:
-
   /**
    * Constructor.
    *
@@ -78,7 +77,7 @@ class ThreadPool {
    * @param tasks Task list to wait on.
    * @return True if all tasks returned Status::Ok, false otherwise.
    */
-  bool wait_all(std::vector<std::future<Status>> &tasks);
+  bool wait_all(std::vector<std::future<Status>>& tasks);
 
  private:
   std::mutex queue_mutex_;

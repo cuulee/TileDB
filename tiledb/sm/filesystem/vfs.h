@@ -38,9 +38,9 @@
 #include "tiledb/sm/enums/vfs_mode.h"
 #include "tiledb/sm/filesystem/filelock.h"
 #include "tiledb/sm/misc/status.h"
+#include "tiledb/sm/misc/thread_pool.h"
 #include "tiledb/sm/misc/uri.h"
 #include "tiledb/sm/storage_manager/config.h"
-#include "tiledb/sm/misc/thread_pool.h"
 
 #ifdef HAVE_HDFS
 #include "hdfs.h"

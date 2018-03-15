@@ -76,10 +76,9 @@ uint64_t ThreadPool::num_threads() const {
   return threads_.size();
 }
 
-
-bool ThreadPool::wait_all(std::vector<std::future<Status>> &tasks) {
+bool ThreadPool::wait_all(std::vector<std::future<Status>>& tasks) {
   bool all_ok = true;
-  for (auto &future : tasks) {
+  for (auto& future : tasks) {
     if (!future.valid()) {
       LOG_ERROR("Waiting on invalid future.");
       all_ok = false;
